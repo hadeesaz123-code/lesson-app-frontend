@@ -1,8 +1,181 @@
+<template>
+  <div id="app">
+
+    // header section
+    <header class="header">
+
+      // title area
+      <div class="header-title">
+        <h1>After School Activities</h1>
+        <p>Discover activities for your child</p>
+      </div>
+
+      // top buttons and search
+      <div class="header-actions">
+
+        // search box
+        <input
+          v-model="searchQuery"
+          placeholder="Search activities..."
+          class="search-input"
+        />
+
+        // login button
+        <button
+          v-if="!currentUser"
+          class="auth-btn"
+          @click="openAuth('login')"
+        >
+          Login
+        </button>
+
+        // register button
+        <button
+          v-if="!currentUser"
+          class="auth-btn"
+          @click="openAuth('register')"
+        >
+          Register
+        </button>
+
+        // when logged in
+        <div v-if="currentUser" class="auth-user">
+          {{ currentUser.name }}
+          <button class="auth-btn" @click="logout">Logout</button>
+        </div>
+
+        // cart button
+        <button
+          class="cart-toggle"
+          :disabled="cart.length === 0"
+          @click="toggleCart"
+        >
+          <span class="cart-label">
+            {{ showCart ? "Back to lessons" : "View cart" }}
+          </span>
+          <span v-if="cart.length" class="cart-badge">
+            {{ cart.length }}
+          </span>
+        </button>
+
+      </div>
+    </header>
+
+    // main content
+    <main class="layout">
+
+      // lesson page
+      <div v-if="!showCart">
+        <LessonList
+          :search="searchQuery"
+          @add-to-cart="onAddToCart"
+        />
+
+        <footer class="footer">
+          <div class="footer-content">
+            <div class="footer-item footer-link" @click="goHome">Home</div>
+            <div class="footer-item">Phone: 07123 456789</div>
+            <div class="footer-item">Email: info@example.com</div>
+          </div>
+        </footer>
+      </div>
+
+      // cart page
+      <div v-else class="cart-page">
+
+        <h2>Your cart</h2>
+
+        <div v-if="cart.length === 0" class="empty">
+          Your cart is empty.
+        </div>
+
+        <ul v-else class="cart-list">
+          <li
+            v-for="(item, index) in cart"
+            :key="item.id + '-' + index"
+            class="cart-item"
+          >
+            <span>{{ item.subject }} — £{{ item.price }}</span>
+            <button @click="removeFromCart(index)" class="remove-btn">
+              Remove
+            </button>
+          </li>
+        </ul>
+
+        <div class="checkout">
+
+          <h3>Checkout</h3>
+
+          <input
+            v-model="name"
+            placeholder="Your name"
+            :class="{ invalid: name && !validName }"
+          />
+
+          <input
+            v-model="phone"
+            placeholder="Phone number"
+            :class="{ invalid: phone && !validPhone }"
+          />
+
+          <input
+            v-model="email"
+            placeholder="Email"
+            :class="{ invalid: email && !validEmail }"
+          />
+
+          <div class="summary">
+            <span>Total:</span>
+            <strong>£{{ totalPrice.toFixed(2) }}</strong>
+          </div>
+
+          <button
+            class="checkout-btn"
+            :disabled="!canCheckout"
+            @click="confirmOrder"
+          >
+            Confirm order
+          </button>
+
+        </div>
+      </div>
+
+    </main>
+
+    // login/register box
+    <div v-if="showAuthModal" class="auth-backdrop">
+      <div class="auth-modal">
+
+        <h2 v-if="authMode === 'login'">Login</h2>
+        <h2 v-else>Create account</h2>
+
+        <input v-model="authEmail" type="email" placeholder="Email" />
+        <input v-model="authPassword" type="password" placeholder="Password" />
+
+        <input
+          v-if="authMode === 'register'"
+          v-model="authName"
+          placeholder="Full name"
+        />
+
+        <div class="auth-actions">
+          <button class="auth-primary" @click="submitAuth">
+            {{ authMode === "login" ? "Login" : "Create account" }}
+          </button>
+          <button class="auth-secondary" @click="closeAuth">Cancel</button>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</template>
+
 <script>
-// Load LessonList file
+// load LessonList
 import LessonList from "./LessonList.vue";
 
-// Pick the right backend address
+// backend address
 const API =
   window.location.hostname === "localhost"
     ? "http://localhost:3000"
@@ -10,57 +183,54 @@ const API =
 
 export default {
 
-  // Use LessonList on this page
+  // register LessonList
   components: { LessonList },
 
-  // Data used on the page
+  // app data
   data() {
     return {
-      searchQuery: "",     // Search text
-      showCart: false,     // Show cart page or not
-      cart: [],            // Items in cart
-      name: "",            // Name box
-      phone: "",           // Phone box
-      email: "",           // Email box
-      showAuthModal: false,// Show login box
-      authMode: "login",   // Login or register
-      authEmail: "",       // Login email
-      authPassword: "",    // Login password
-      authName: "",        // Register name
-      currentUser: null    // Logged in user
+      searchQuery: "",
+      showCart: false,
+      cart: [],
+      name: "",
+      phone: "",
+      email: "",
+      showAuthModal: false,
+      authMode: "login",
+      authEmail: "",
+      authPassword: "",
+      authName: "",
+      currentUser: null
     };
   },
 
-  // Runs when page loads
+  // run when app loads
   mounted() {
-
-    // Get user from browser
     const saved = localStorage.getItem("user");
-
-    // If user saved, load it
     if (saved) {
       this.currentUser = JSON.parse(saved);
     }
   },
 
+  // checks
   computed: {
 
-    // Check name letters only
+    // letters only
     validName() {
       return /^[A-Za-z\s]+$/.test(this.name);
     },
 
-    // Check phone numbers only
+    // numbers only
     validPhone() {
       return /^\d+$/.test(this.phone);
     },
 
-    // Check email looks right
+    // email format
     validEmail() {
       return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.email);
     },
 
-    // Allow order only if all ok
+    // allow checkout
     canCheckout() {
       return (
         this.cart.length > 0 &&
@@ -70,38 +240,38 @@ export default {
       );
     },
 
-    // Add all cart prices
+    // total price
     totalPrice() {
-      return this.cart.reduce((total, item) => total + item.price, 0);
+      return this.cart.reduce((sum, item) => sum + item.price, 0);
     }
   },
 
   methods: {
 
-    // Add item to cart
+    // add to cart
     onAddToCart(item) {
       this.cart.push(item);
     },
 
-    // Show or hide cart page
+    // show cart
     toggleCart() {
       this.showCart = !this.showCart;
     },
 
-    // Remove from cart
+    // remove item
     removeFromCart(index) {
       this.cart.splice(index, 1);
       if (this.cart.length === 0) this.showCart = false;
     },
 
-    // Go back home
+    // home page
     goHome() {
       this.showCart = false;
       this.searchQuery = "";
       window.scrollTo(0, 0);
     },
 
-    // Open login box
+    // open login
     openAuth(mode) {
       this.authMode = mode;
       this.showAuthModal = true;
@@ -110,19 +280,17 @@ export default {
       this.authName = "";
     },
 
-    // Close login box
+    // close login
     closeAuth() {
       this.showAuthModal = false;
     },
 
-    // Login or register user
+    // login or register
     async submitAuth() {
 
-      // Pick path
       const endpoint =
         this.authMode === "login" ? "/login" : "/register";
 
-      // Make user data
       const payload = {
         email: this.authEmail,
         password: this.authPassword,
@@ -130,33 +298,26 @@ export default {
       };
 
       try {
-
-        // Send to backend
         const res = await fetch(`${API}${endpoint}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload)
         });
 
-        // Get reply
         const data = await res.json();
 
-        // Show error
         if (!res.ok) {
           alert(data.error || "Login failed");
           return;
         }
 
-        // Save user
         this.currentUser = data.user || {
           name: payload.name,
           email: payload.email
         };
 
-        // Save user in browser
         localStorage.setItem("user", JSON.stringify(this.currentUser));
 
-        // Show message
         alert(data.message);
         this.closeAuth();
 
@@ -165,46 +326,38 @@ export default {
       }
     },
 
-    // Logout user
+    // logout
     logout() {
       this.currentUser = null;
       localStorage.removeItem("user");
       alert("Logged out");
     },
 
-    // Save order and reduce spaces
+    // send order and update lessons
     async confirmOrder() {
 
-      // Stop if wrong info
       if (!this.canCheckout) return;
 
-      // Make order info
       const payload = {
         name: this.name,
         phone: this.phone,
         email: this.email,
-
-        // Send lesson ids
         items: this.cart.map(item => ({
           lessonId: item.id,
           quantity: 1
         }))
       };
 
-      // Send order
       await fetch(`${API}/orders`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
       });
 
-      // Change spaces in database
       for (const item of this.cart) {
 
-        // Take one space
         const newSpaces = item.spaces - 1;
 
-        // Save updated number
         await fetch(`${API}/lessons/${item.id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
@@ -212,16 +365,15 @@ export default {
         });
       }
 
-      // Show success
       alert("Order done!");
 
-      // Clear cart
       this.cart = [];
       this.showCart = false;
     }
   }
 };
 </script>
+
 
 <style>
 body,
