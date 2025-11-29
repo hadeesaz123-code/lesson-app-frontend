@@ -1,20 +1,22 @@
 <template>
-  <!-- Outer wrapper for the lesson listing page -->
+  // Outer wrapper for the lesson listing page
   <div class="lesson-list">
 
-    <!-- Loading text while lessons are fetched -->
+    //Loading text while lessons are fetched
     <div v-if="loading" class="loading">Loading lessons…</div>
 
-    <!-- Grid of lesson cards -->
+   
     <ul v-else class="lessons">
-      <!-- Single lesson card (clicking opens details modal) -->
+
+      //Single lesson card (clicking opens details modal)
       <li
         v-for="lesson in filteredLessons"
         :key="lesson._id || lesson.subject"
         class="lesson-card"
         @click="openDetails(lesson)"
       >
-        <!-- Top image section -->
+
+        // Top image section 
         <div class="card-image">
           <img
             v-if="lesson.image"
@@ -23,24 +25,24 @@
           />
         </div>
 
-        <!-- Text and metadata area -->
         <div class="card-body">
-          <!-- Lesson subject/title -->
+
+         
           <h3 class="title">{{ lesson.subject }}</h3>
 
-          <!-- Short description -->
+        
           <p class="desc">{{ lesson.description }}</p>
 
-          <!-- Bottom row: price, spaces, and add button -->
+          // Bottom row: price, spaces, and add button -->
           <div class="meta-row">
 
-            <!-- Price and spaces info -->
+            // Price and spaces info
             <div class="info">
               <span class="price">£{{ lesson.price }}</span>
               <span class="spaces">{{ lesson.spaces }} spaces</span>
             </div>
 
-            <!-- Add to cart button (.stop stops opening the modal) -->
+            // Add to cart button (stop prevents modal from opening)
             <div class="actions">
               <button
                 :disabled="lesson.spaces <= 0"
@@ -57,9 +59,10 @@
 
     <!-- Details modal, shown when a lesson is selected -->
     <div v-if="selectedLesson" class="modal-backdrop">
+
       <div class="modal">
 
-        <!-- Modal title -->
+       
         <h2>{{ selectedLesson.subject }}</h2>
 
         <!-- Large image in modal -->
@@ -69,13 +72,13 @@
           class="detail-img"
         />
 
-        <!-- Full description and data -->
+        //Full description and data
         <p class="detail-desc">{{ selectedLesson.description }}</p>
         <p><strong>Price:</strong> £{{ selectedLesson.price }}</p>
         <p><strong>Location:</strong> {{ selectedLesson.location }}</p>
         <p><strong>Spaces left:</strong> {{ selectedLesson.spaces }}</p>
 
-        <!-- Add to cart from modal -->
+        // Add to cart from modal
         <button
           class="add-btn"
           :disabled="selectedLesson.spaces <= 0"
@@ -104,7 +107,7 @@ export default {
   // Component name
   name: "LessonList",
 
-  // Props received from parent (App.vue)
+  // Props received from App.vue
   props: {
     // Search text typed by user in parent
     search: { type: String, default: "" }
@@ -113,32 +116,33 @@ export default {
   // Local state for this component
   data() {
     return {
-      lessons: [],        // All lessons loaded from backend
-      loading: true,      // True while fetching lessons
-      searchTimer: null,  // Timer id used for debounced search
+      lessons: [],         // All lessons loaded from backend
+      loading: true,       // True while fetching lessons
+      searchTimer: null,   // Timer used for debouncing search
       selectedLesson: null // Lesson currently shown in modal
     };
   },
 
-  // Watchers react to change in props or data
-  watch: {
-    // When search prop changes, start a debounced search
+  // Runs when data changes
+watch: {
+    // When the search prop changes, start debounced search
     search(newValue) {
       this.debounceSearch(newValue);
     }
   },
 
-  // Computed properties are derived from data/props
+  // updates automatically when data changes
   computed: {
-    // Filter lessons on the front-end based on search text
+    // Filter lessons displayed on frontend
     filteredLessons() {
-      // Convert search text to lowercase and trim spaces
+
+      // Convert search text to lowercase to match regardless of case
       const q = this.search.toLowerCase().trim();
 
-      // If there is no query, return all lessons
+      // If empty search box, show all lessons
       if (!q) return this.lessons;
 
-      // Otherwise filter by subject or description
+      // Otherwise filter lessons by subject or description
       return this.lessons.filter(l =>
         (l.subject || "").toLowerCase().includes(q) ||
         (l.description || "").toLowerCase().includes(q)
@@ -147,62 +151,85 @@ export default {
   },
 
   methods: {
-    // Fetch all lessons from backend API
+
+    // Load all lessons from backend
     async fetchLessons() {
       try {
-        // Send GET request to /lessons
+
+        // Send GET request to /lessons API
         const res = await fetch(`${API}/lessons`);
-        // Parse JSON body and store in lessons array
+
+        // Convert JSON response into array of lessons
         this.lessons = await res.json();
+
       } catch (err) {
-        // Log any error in console
+
+        // Print error if fetch fails
         console.error("Error loading lessons:", err);
+
       } finally {
-        // Always hide loading state after attempt
+
+        // Hide loading message after request is finished
         this.loading = false;
+
       }
     },
 
-    // Delay search until user stops typing
+    // Debounce prevents search from running too often
     debounceSearch(q) {
-      // Clear previous timer if any
+
+      // Remove previous timer if it exists
       clearTimeout(this.searchTimer);
-      // Start a new timer that runs doSearch after 250ms
+
+      // Start new delay before search
       this.searchTimer = setTimeout(() => this.doSearch(q), 250);
+
     },
 
-    // Perform search on backend API
+    // Perform backend-based search
     async doSearch(q) {
-      // If query is empty, simply reload all lessons
+
+      // If search field is empty re-fetch all lessons
       if (!q) return this.fetchLessons();
 
       try {
-        // Send GET request to /search with query
+
+        // Send request to backend search API
         const res = await fetch(`${API}/search?q=${encodeURIComponent(q)}`);
-        // Replace lessons with filtered results from backend
+
+        // Replace displayed lessons with filtered results
         this.lessons = await res.json();
+
       } catch (err) {
-        // Log search error
+
+        // Print error if search fails
         console.error("Search failed:", err);
+
       }
     },
 
-    // Build image URL (for now just return raw value or empty string)
     imageSrc(raw) {
-      return raw || "";
-    },
 
-    // Add lesson to cart and decrease spaces by one
+  // If image already has https, use it
+  if (raw.startsWith("http")) return raw;
+
+  // If not, load it from backend
+  return `https://lesson-app-backend-7mte.onrender.com${raw}`;
+}
+npmr
+    // Add lesson to cart AND store original space count
     addToCart(lesson) {
-      // Emit event so parent (App.vue) can update its cart
+
+      // send data so App.vue can update the cart
       this.$emit("add-to-cart", {
-        id: lesson._id || lesson.subject, // Unique identifier
-        subject: lesson.subject,          // Title for display
-        price: lesson.price,              // Price for cart
-        quantity: 1                       // One unit each click
+        id: lesson._id || lesson.subject, // Unique lesson identifier
+        subject: lesson.subject,          // Lesson title
+        price: lesson.price,              // Lesson price
+        quantity: 1,                      // Quantity per click
+        spaces: lesson.spaces             // Save space BEFORE decrease
       });
 
-      // Decrease local spaces count for this lesson
+      // Immediately reduce displayed spaces in the UI
       lesson.spaces--;
     },
 
@@ -211,16 +238,18 @@ export default {
       this.selectedLesson = lesson;
     },
 
-    // Close modal by clearing selectedLesson
+    // Close modal view
     closeDetails() {
       this.selectedLesson = null;
     }
   },
 
-  // Lifecycle hook: runs when component is inserted in the page
+  // Lifecycle hook: runs when component loads
   mounted() {
-    // Load lessons as soon as component is ready
+
+    // Fetch lessons immediately on page load
     this.fetchLessons();
+
   }
 };
 </script>
