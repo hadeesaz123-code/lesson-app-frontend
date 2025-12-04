@@ -47,7 +47,7 @@
           <div class="footer-content">
             <div class="footer-item footer-link" @click="goHome">Home</div>
             <div class="footer-item">Phone: 07123 456789</div>
-            <div class="footer-item">Email: info@example.com</div>
+            <div class="footer-item">Email: info@gmail.com</div>
           </div>
         </footer>
       </div>
